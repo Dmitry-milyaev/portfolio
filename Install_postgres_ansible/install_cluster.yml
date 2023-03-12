@@ -1,0 +1,88 @@
+
+---
+- name: Install Cluster Postgres
+  hosts: Cluster_DB
+  become: yes
+
+  tasks:
+
+  - name: Step 1
+    include: steps_postgres/PostgreSQL.yml
+
+- name: Master setting
+  hosts: master
+  become: yes
+
+  tasks:
+
+  - name: Step 2
+    include: steps_postgres/master_setting.yml
+
+- name: Slave setting
+  hosts: slave
+  become: yes
+
+  tasks:
+
+  - name: Step 3
+    include: steps_postgres/slave_setting.yml
+  
+- name: Copy pgsql
+  hosts: Cluster_DB
+  become: yes
+
+  tasks:
+
+  - name: Step 4
+    include: steps_postgres/PCS_install.yml
+
+- name: Configuring PCS
+  hosts: master
+  become: yes
+   
+  tasks:
+
+  - name: Step 5
+    include: steps_postgres/PCS_master_config.yml
+
+- name: Configuring PCS
+  hosts: master
+  become: yes
+       
+  tasks:
+
+  - name: Step 6
+    include: steps_postgres/PCS_resours.yml
+
+- name: Stop slave
+  hosts: slave
+  become: yes
+
+  tasks:
+
+  - name: Stop pcs slave
+    shell: "pcs cluster stop"
+
+- name: Stop master
+  hosts: master
+  become: yes
+
+  tasks:
+
+  - name: Stop pcs master
+    shell: "pcs cluster stop --force"
+
+- name: Start PCS cluster
+  hosts: Cluster_DB
+  become: yes
+
+  tasks:
+  
+  - name: rm PGLOCK
+    shell: "rm -rf /pgdata/tmp/PGSQL.lock"
+
+  - name: Start
+    shell: "pcs cluster start"
+
+
+

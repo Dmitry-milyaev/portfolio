@@ -1,0 +1,22 @@
+
+    - name: Copy pgsql CentOS
+      copy: src=pgsql_files/pgsql{{ version }} dest=/usr/lib/ocf/resource.d/heartbeat/pgsql mode=0777
+      when: ansible_distribution == "CentOS"
+                
+    - name: Copy pgsql RedOS
+      copy: src=pgsql_files/pgsql_redOS dest=/usr/lib/ocf/resource.d/heartbeat/pgsql mode=0777
+      when: ansible_distribution == "REDOS"
+     
+    - name: Install pcs corosync pacemaker resource-agents
+      yum:
+        name: ['pcs','corosync','pacemaker','resource-agents']
+        state: latest
+
+    - name: Update password Hacluster
+      user:
+        name: hacluster
+        password: 'hacluster'
+    
+    - name: Start services
+      service: name=pcsd state=started enabled=yes
+

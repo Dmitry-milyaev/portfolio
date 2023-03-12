@@ -1,0 +1,55 @@
+
+   - name: Init DB
+     shell: "/usr/pgsql-{{ version }}/bin/initdb -k -D /pgdata/data"
+     become_user: postgres
+
+   - name: Setting postgresql.conf
+     lineinfile:
+       line: "{{ item.line }}"
+       regexp: "{{ item.regexp }}"
+       path: /pgdata/data/postgresql.conf
+     loop:
+       - line: "listen_addresses = '*'"
+         regexp: "#listen_addresses = 'localhost'"
+       - line: "port = 5432"
+         regexp: "#port = 5432"
+       - line: "wal_level = hot_standby"
+         regexp: "#wal_level = replica"
+       - line: "max_wal_senders = 10"
+         regexp: "#max_wal_senders = 10"
+       - line: "max_replication_slots = 10"
+         regexp: "#max_replication_slots = 10"
+       - line: "hot_standby = on"
+         regexp: "#hot_standby = on"
+       - line: "full_page_writes = on"
+         regexp: "#full_page_writes = on"
+       - line: "log_directory = '/var/log/pg_log'"
+         regexp: "#log_directory = 'log'"
+       - line: "log_filename = 'postgresql-%a.log'"
+         regexp: "#log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'"
+
+   - name: Clear pg_hba.conf
+     shell: echo " " > /pgdata/data/pg_hba.conf
+
+   - name: Setting pg_hba.conf
+     lineinfile:
+       dest: /pgdata/data/pg_hba.conf
+       line: "{{ item }}"
+       insertafter: EOF
+     loop:  
+       - "host  postgres  postgres   {{ ansible_default_ipv4.address }}/32     trust"
+       - "host  postgres  postgres   {{ ip_slave }}/32     trust"
+       - "host  postgres  postgres   {{ ip_virt }}/32     trust"
+       - "#host database_name user_name      x.x.x.x/32      md5"
+       - "local  all  postgres          peer"
+       - "local   replication         postgres      peer" 
+       - "host replication replica  {{ ansible_default_ipv4.address }}/32   md5"
+       - "host replication replica  {{ ip_slave }}/32   md5"
+       - "host replication replica  {{ ip_virt }}/32   md5"
+  
+   - name: Start Postgres
+     service: name=postgresql-{{ version }} state=started
+
+   - name: Create user Replica in database
+     shell: psql -d postgres -c "create user replica with replication encrypted password 'replica'"
+     become_user: postgres

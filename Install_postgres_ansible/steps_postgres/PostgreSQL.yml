@@ -1,0 +1,35 @@
+
+  - name: Install packages
+    yum: 
+      name: ['postgresql{{ version }}', 'postgresql{{ version }}-server', 'postgresql{{ version }}-contrib', 'postgresql{{ version }}-libs']
+      state: latest
+
+  - name: Preparation directory /pgdata
+    file:
+      path: /pgdata
+      owner: postgres
+      group: postgres
+      mode: 0700
+      recurse: yes
+
+  - name: Preparation logs directory  
+    file:
+      path: /var/log/pg_log
+      owner: postgres
+      group: postgres
+      recurse: yes
+
+  - name: Preparation Bash_profile    
+    lineinfile:
+      dest: /var/lib/pgsql/.bash_profile
+      line: "PGDATA=/pgdata/data"
+      regexp: "PGDATA=/var/lib/pgsql/{{ version }}/data"
+      
+  - name: Preparation Service
+    lineinfile:
+      dest: /usr/lib/systemd/system/postgresql-{{ version }}.service
+      line: "Environment=PGDATA=/pgdata/data"
+      regexp: "Environment=PGDATA=/var/lib/pgsql/{{ version }}/data"
+
+  - name: Daemon-reload
+    shell: "systemctl daemon-reload"

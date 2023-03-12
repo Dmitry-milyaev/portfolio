@@ -1,0 +1,24 @@
+
+    
+
+    - name: Check pacemaker version
+      shell: "rpm -qa | grep pacemaker-[0-9] | cut -b 11"
+      register: pacemaker_version
+
+    - debug: var=pacemaker_version.stdout
+
+    - name: Configuring cluster
+      shell: "{{ item }}"
+      loop:
+        - "pcs cluster auth pg1 pg2"
+        - "pcs cluster setup --start --name cluster_name pg1 pg2"
+      when: pacemaker_version.stdout == "1"
+
+    - name: Configuring cluster
+      shell: "{{ item }}"
+      loop:
+        - "pcs host auth -u hacluster pg1 pg2"
+        - "pcs cluster setup cluster_name  pg1 pg2"
+        - "rm -rf /var/lib/pacemaker/cib/*"
+      when: pacemaker_version.stdout == "2"
+

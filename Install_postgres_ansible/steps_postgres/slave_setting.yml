@@ -1,0 +1,10 @@
+
+
+    - name: Replication database on slave
+      shell: "PGPASSWORD=replica pg_basebackup -h pg1 -U replica -D /pgdata/data -X s -P"
+    
+    - file:
+        path: /pgdata/data
+        owner: postgres
+        group: postgres
+        recurse: yes

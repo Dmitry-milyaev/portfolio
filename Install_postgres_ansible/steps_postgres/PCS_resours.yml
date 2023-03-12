@@ -1,0 +1,43 @@
+
+    
+    - name: Check ens
+      shell: "ip -br a | grep ens | awk '{print $1}'"
+      register: ens_cluster
+      
+    - debug: var=ens_cluster.stdout
+
+    - name: Check mask
+      shell: "ip -br a | grep ens | tail -c 4"
+      register: mask
+
+    - debug: var=mask.stdout
+
+    - name: Check pacemaker version
+      shell: "rpm -qa | grep pacemaker-[0-9] | cut -b 11"
+      register: pacemaker_version
+
+    - shell: "{{ item }}"
+      loop:
+         - 'pcs property set no-quorum-policy="ignore"'
+         - 'pcs property set stonith-enabled="false"'
+         - 'pcs resource defaults resource-stickiness="1000"'
+         - 'pcs resource defaults migration-threshold="3"'
+         - 'pcs resource create vip-master IPaddr2 ip="{{ ip_virt }}" nic="{{ ens_cluster.stdout }}" cidr_netmask="{{ mask.stdout }}" op start timeout="180s" interval="0s" on-fail="restart" op monitor timeout="180s" interval="10s" on-fail="restart" op stop timeout="180s" interval="0s" on-fail="block"'
+         - 'pcs resource create pgsql pgsql pgctl="/usr/pgsql-{{ version }}/bin/pg_ctl" psql="/usr/pgsql-{{ version }}/bin/psql" pgdata="/pgdata/data/" rep_mode="sync" node_list="pg1 pg2" primary_conninfo_opt="keepalives_idle=60 keepalives_interval=5 keepalives_count=5 password=replica" repuser=replica replication_slot_name=standby_slot2 master_ip="{{ ip_virt }}" op start timeout="180s" interval="0s" on-fail="restart" op monitor timeout="180s" interval="4s" on-fail="restart" op monitor timeout="180s" interval="3s" on-fail="restart" role="Master" op promote timeout="180s" interval="0s" on-fail="restart" op demote timeout="180s" interval="0s" on-fail="stop" op stop timeout="180s" interval="0s" on-fail="block" op notify timeout="180s" interval="0s"'
+    - shell: "{{ item }}"
+      loop:
+        - "pcs resource master msPostgresql pgsql master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true"
+        - "pcs resource group add master-group vip-master"
+        - "pcs constraint colocation add master-group with Master msPostgresql INFINITY"
+        - "pcs constraint order promote msPostgresql then start master-group symmetrical=false score=INFINITY"
+        - "pcs constraint order demote msPostgresql then stop master-group symmetrical=false score=0"
+      when: pacemaker_version.stdout == "1"
+     
+    - shell: "{{ item }}"
+      loop:
+        - "pcs  resource promotable pgsql promoted-max=1 promoted-node-max=1 clone-max=2 clone-node-max=1 notify=true"
+        - "pcs  resource group add master-group vip-master"
+        - "pcs  constraint colocation add master-group with Master pgsql-clone"
+        - "pcs  constraint order promote pgsql-clone then start master-group symmetrical=false score=INFINITY"
+        - "pcs  constraint order demote pgsql-clone then stop master-group symmetrical=false score=0"
+      when: pacemaker_version.stdout == "2"
