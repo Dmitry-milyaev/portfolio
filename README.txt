@@ -1,0 +1,3 @@
+install_postgres_bash - Установка двухузлового кластера PostgreSQL с помощью Bash
+Install_postgres_ansible - Установка двухузлового кластера PostgreSQL с помощью Ansible
+python_app-main - Приложение с микросервисной архитектурой в docker-контейнерах. importer - получает данные по API и загружает в БД(образ postgres с хаба). gate - забирает и обрабатывает данные из БД.  web - вывод данных в web.    

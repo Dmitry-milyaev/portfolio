@@ -1,0 +1,42 @@
+version: "3"
+
+services:
+
+ database:
+  image: postgres
+  container_name: database
+  ports: 
+      - 5432:5432
+  volumes: 
+      - /pgdata:/var/lib/postgresql/data
+  environment:
+      - POSTGRES_PASSWORD="mysecretpassword"
+  networks:
+      - main_network
+
+ gate:
+  build: gate/
+  container_name: gate
+  networks:
+      - main_network 
+  depends_on:
+      - database
+ 
+ web:
+  build: web/
+  container_name: web
+  networks:
+      - main_network
+  depends_on:
+      - gate
+  ports:
+      - 80:80
+
+
+networks:
+  main_network:
+    name: app_network
+
+
+
+
